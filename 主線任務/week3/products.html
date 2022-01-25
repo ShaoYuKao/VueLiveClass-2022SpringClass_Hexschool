@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+</head>
+
+<body>
+    <div id="app">
+        <div class="container d-flex py-3">
+            <button type="button" class="btn btn-outline-dark ms-auto" @click="logout" :disabled="isLogout">登出</button>
+        </div>
+        <div class="container">
+            <div class="text-end mt-4">
+                <button class="btn btn-primary" @click="openModal(stateMode.add)">
+                    建立新的產品
+                </button>
+            </div>
+            <table class="table mt-4">
+                <thead>
+                    <tr>
+                        <th width="120">
+                            分類
+                        </th>
+                        <th>產品名稱</th>
+                        <th width="120" class="text-end">
+                            原價
+                        </th>
+                        <th width="120" class="text-end">
+                            售價
+                        </th>
+                        <th width="100" class="text-center">
+                            是否啟用
+                        </th>
+                        <th width="120" class="text-center">
+                            編輯
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in products" :key="item.id">
+                        <!-- 分類 -->
+                        <td>{{ item.category }}</td>
+                        <!-- 產品名稱 -->
+                        <td>{{ item.title }}</td>
+                        <!-- 原價 -->
+                        <td class="text-end">{{ item.origin_price }}</td>
+                        <!-- 售價 -->
+                        <td class="text-end">{{ item.price }}</td>
+                        <!-- 是否啟用 -->
+                        <td class="text-center">
+                            <span class="text-success fw-bold" v-if="item.is_enabled > 0">啟用</span>
+                            <span class="text-danger fw-bold" v-if="item.is_enabled <= 0">未啟用</span>
+                        </td>
+                        <!-- 編輯 -->
+                        <td>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline-primary btn-sm me-1"
+                                    @click="openModal(stateMode.edit, item)">
+                                    編輯
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm"
+                                    @click="openModal(stateMode.delete, item)">
+                                    刪除
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Modal -->
+        <div id="productModal" ref="productModal" class="modal fade" tabindex="-1" aria-labelledby="productModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content border-0">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 id="productModalLabel" class="modal-title">
+                            <span v-if="state === stateMode.add">新增產品</span>
+                            <span v-if="state === stateMode.edit">編輯產品</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <p class="text-center text-danger"><span class="fs-4">*</span>符號為必填欄位</p>
+                            <div class="col-sm-4">
+                                <div class="mb-2">
+                                    <div class="mb-3">
+                                        <label for="imageUrl" class="form-label">輸入主圖片網址</label>
+                                        <input v-model="tempProduct.imageUrl" type="text" class="form-control mb-2"
+                                            placeholder="請輸入圖片連結">
+                                        <img class="img-fluid" :src="tempProduct.imageUrl">
+                                    </div>
+                                    <hr />
+                                    <h3 class="mb-3">新增其他圖片</h3>
+                                    <div v-if="Array.isArray(tempProduct.imagesUrl)">
+                                        <div class="mb-1" v-for="(image, index) in tempProduct.imagesUrl" :key="index">
+                                            <div class="mb-3">
+                                                <label for="imageUrl" class="form-label">圖片網址</label>
+                                                <input v-model="tempProduct.imagesUrl[index]" type="text"
+                                                    class="form-control" placeholder="請輸入圖片連結">
+                                            </div>
+                                            <img class="img-fluid" :src="image">
+                                            <button class="btn btn-outline-danger btn-sm d-block w-100 mt-1"
+                                                @click="tempProduct.imagesUrl.splice(index, 1)">
+                                                刪除圖片
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-outline-primary btn-sm d-block w-100" @click="createImages()"
+                                        :disabled="isDisabledAddImg()">
+                                        新增圖片
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-sm-8">
+                                <div class="mb-3">
+                                    <!-- 標題 -->
+                                    <label for="title" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.title}}</label>
+                                    <input id="title" type="text" class="form-control" :placeholder="`請輸入${productFieldInfo.title}`"
+                                        v-model="tempProduct.title">
+                                </div>
+
+                                <div class="row">
+                                    <div class="mb-3 col-md-6">
+                                        <!-- 分類 -->
+                                        <label for="category" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.category}}</label>
+                                        <input id="category" type="text" class="form-control" :placeholder="`請輸入${productFieldInfo.category}`"
+                                            v-model="tempProduct.category">
+                                    </div>
+                                    <div class="mb-3 col-md-6">
+                                        <!-- 單位 -->
+                                        <label for="price" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.unit}}</label>
+                                        <input id="unit" type="text" class="form-control" :placeholder="`請輸入${productFieldInfo.unit}`"
+                                            v-model="tempProduct.unit">
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="mb-3 col-md-6">
+                                        <!-- 原價 -->
+                                        <label for="origin_price" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.origin_price}}</label>
+                                        <input id="origin_price" type="number" min="0" class="form-control"
+                                            :placeholder="`請輸入${productFieldInfo.origin_price}`" v-model.number="tempProduct.origin_price">
+                                    </div>
+                                    <div class="mb-3 col-md-6">
+                                        <!-- 售價 -->
+                                        <label for="price" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.price}}</label>
+                                        <input id="price" type="number" min="0" class="form-control" :placeholder="`請輸入${productFieldInfo.price}`"
+                                            v-model.number="tempProduct.price">
+                                    </div>
+                                </div>
+                                <hr>
+
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">產品描述</label>
+                                    <textarea id="description" type="text" class="form-control" placeholder="請輸入產品描述"
+                                        v-model="tempProduct.description">
+                                    </textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="content" class="form-label">說明內容</label>
+                                    <textarea id="description" type="text" class="form-control" placeholder="請輸入說明內容"
+                                        v-model="tempProduct.content">
+                                    </textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input id="is_enabled" class="form-check-input" type="checkbox" :true-value="1"
+                                            :false-value="0" v-model="tempProduct.is_enabled">
+                                        <label class="form-check-label" for="is_enabled">是否啟用</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            取消
+                        </button>
+                        <button type="button" class="btn btn-primary" @click="updateProduct">
+                            確認
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="delProductModal" ref="delProductModal" class="modal fade" tabindex="-1"
+            aria-labelledby="delProductModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content border-0">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 id="delProductModalLabel" class="modal-title">
+                            <span>刪除產品</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        是否刪除
+                        <strong class="text-danger">{{ tempProduct.title }}</strong> 商品(刪除後將無法恢復)。
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            取消
+                        </button>
+                        <button type="button" class="btn btn-danger" @click="delProduct">
+                            確認刪除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="loadingModal" ref="loadingModal" class="modal fade" tabindex="-1" aria-labelledby="loadingModalLabel"
+            aria-hidden="true" style="z-index: 9999;">
+            <div class="modal-dialog modal-dialog-centered"
+                style="display: flex; align-items: center; justify-content: center;">
+                <div class="spinner-border" style="width: 5rem; height: 5rem; " role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <!-- Modal -->
+    </div>
+    <script src="https://unpkg.com/vue@next"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.9.1/axios.min.js'
+        integrity='sha512-Xk3wWei2TGrsh9kDSBKUMIjw/86sLUvhtnv9f7fOuIwhhiUTKz8szkWkzHthrM5Bb3Bu9idSzkxOrkzhcneuiw=='
+        crossorigin='anonymous'></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"
+        integrity="sha384-SR1sx49pcuLnqZUnnPwx6FCym0wLsk5JZuNx2bPPENzswTNFaQU1RDvt3wT4gWFG"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.min.js"
+        integrity="sha384-j0CNLUeiqtyaRmlzUHCPZ+Gy5fQu0dQ6eZ/xAww941Ai1SxSY+0EQqNXNE6DZiVc"
+        crossorigin="anonymous"></script>
+    <script>
+        let productModal = null;
+        let delProductModal = null;
+        let loadingModal = null;
+        const httpMethod = {
+            get: 'get',
+            post: 'post',
+            put: 'put',
+            delete: 'delete'
+        }
+
+        const app = {
+            data() {
+                return {
+                    apiUrl: 'https://vue3-course-api.hexschool.io/v2',
+                    apiPath: '202201-vue-shaoyu',
+                    productFieldInfo: {
+                        title: '標題',
+                        category: '分類',
+                        unit: '單位',
+                        origin_price: '原價',
+                        price: '售價'
+                    },
+                    tempProduct: {},
+                    state: "",
+                    stateMode: {
+                        add: "add",
+                        edit: "edit",
+                        delete: "delete"
+                    },
+                    isLoading: false,
+                    products: []
+                }
+            },
+            methods: {
+                checkAdminUser() {
+                    const url = `${this.apiUrl}/api/user/check`;
+
+                    this.isLoading = true;
+
+                    axios[httpMethod.post](url)
+                        .then(() => {
+                            this.getData();
+                        })
+                        .catch((err) => {
+                            console.error("checkAdminUser err", err);
+                            alert(err.data.message);
+                            window.location = 'login.html';
+                        })
+                },
+                getData() {
+                    this.isLoading = true;
+
+                    const url = `${this.apiUrl}/api/${this.apiPath}/admin/products/all`;
+                    axios[httpMethod.get](url).then((response) => {
+                        this.products = response.data.products;
+                    }).catch((err) => {
+                        console.error("getData err", err);
+                        alert(err.data.message);
+                    }).finally(() => {
+                        this.isLoading = false;
+                    })
+                },
+                openModal(state, item) {
+                    this.state = state;
+
+                    if (state === this.stateMode.add) {
+                        this.tempProduct = {
+                            imagesUrl: [],
+                        };
+                        productModal.show();
+                    } else if (state === this.stateMode.edit) {
+                        this.tempProduct = JSON.parse(JSON.stringify(item));
+                        productModal.show();
+                    } else if (state === this.stateMode.delete) {
+                        this.tempProduct = { ...item };
+                        delProductModal.show()
+                    }
+                },
+                createImages() {
+                    if(this.tempProduct.imageUrl && 0 < this.tempProduct.imageUrl.length) {
+                        this.tempProduct.imagesUrl.push('');
+                    } else {
+                        alert("請先輸入輸入主圖片網址");
+                    }
+                },
+                updateProduct() {
+                    let url = '';
+                    let http = '';
+
+                    if (this.state === this.stateMode.add) {
+                        url = `${this.apiUrl}/api/${this.apiPath}/admin/product`;
+                        http = httpMethod.post;
+                    } else if (this.state === this.stateMode.edit) {
+                        url = `${this.apiUrl}/api/${this.apiPath}/admin/product/${this.tempProduct.id}`;
+                        http = httpMethod.put;
+                    }
+
+                    if (!url || !http) {
+                        return;
+                    }
+
+                    if(!this.tempProduct.title) {
+                        alert(`請輸入${this.productFieldInfo.title}`);
+                        return;
+                    }
+                    if(!this.tempProduct.category) {
+                        alert(`請輸入${this.productFieldInfo.category}`);
+                        return;
+                    }
+                    if(!this.tempProduct.unit) {
+                        alert(`請輸入${this.productFieldInfo.unit}`);
+                        return;
+                    }
+                    if(!this.tempProduct.origin_price) {
+                        alert(`請輸入${this.productFieldInfo.origin_price}`);
+                        return;
+                    }
+                    if(!this.tempProduct.price) {
+                        alert(`請輸入${this.productFieldInfo.price}`);
+                        return;
+                    }
+
+                    this.isLoading = true;
+
+                    if (this.tempProduct.imagesUrl && 0 < this.tempProduct.imagesUrl.length) {
+                        const imagesUrlList = this.tempProduct.imagesUrl;
+                        imagesUrlList.forEach((element, index) => {
+                            if(0 >= element.length) {
+                                imagesUrlList.splice(index, 1);
+                            }
+                        });
+                    }
+                    
+                    axios[http](url, { data: this.tempProduct }).then((response) => {
+                        alert(response.data.message);
+                        productModal.hide();
+                        this.getData();
+                    }).catch((err) => {
+                        console.error("updateProduct err", err);
+                        alert(err.data.message);
+                    }).finally(() => {
+                        this.isLoading = false;
+                    })
+                },
+                delProduct() {
+                    const url = `${this.apiUrl}/api/${this.apiPath}/admin/product/${this.tempProduct.id}`;
+
+                    this.isLoading = true;
+
+                    axios[httpMethod.delete](url).then((response) => {
+                        alert(response.data.message);
+                        delProductModal.hide();
+                        this.getData();
+                    }).catch((err) => {
+                        console.error("delProduct err", err);
+                        alert(err.data.message);
+                    }).finally(() => {
+                        this.isLoading = false;
+                    })
+                },
+                isDisabledAddImg() {
+                    let isDisabled = false;
+
+                    if (this.tempProduct && this.tempProduct.imagesUrl && 0 < this.tempProduct.imagesUrl.length) {
+                        if (0 >= this.tempProduct.imagesUrl[this.tempProduct.imagesUrl.length - 1].length) {
+                            isDisabled = true;
+                        }
+                    }
+
+                    return isDisabled;
+                },
+                logout() {
+                    this.isLoading = true;
+
+                    const url = `${this.apiUrl}/api/logout`;
+                    axios.post(url)
+                        .then((res) => { })
+                        .catch((err) => {
+                            console.error("err", err);
+                        })
+                        .finally(() => {
+                            document.cookie = "hexToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                            this.isLoading = false;
+                            window.location = 'index.html';
+                        })
+
+                }
+            },
+            watch: {
+                isLoading(currValue, preValue) {
+                    if (currValue) {
+                        loadingModal.show();
+                    } else {
+                        loadingModal.hide();
+                    }
+                }
+            },
+            mounted() {
+                productModal = new bootstrap.Modal(document.getElementById('productModal'), {
+                    keyboard: false,
+                    backdrop: 'static'
+                });
+                delProductModal = new bootstrap.Modal(document.getElementById('delProductModal'), {
+                    keyboard: false,
+                    backdrop: 'static'
+                });
+                loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
+                    keyboard: false,
+                    backdrop: 'static'
+                });
+
+                // 取出 Token
+                const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
+                axios.defaults.headers.common.Authorization = token;
+
+                this.checkAdminUser()
+            }
+        }
+        Vue.createApp(app).mount('#app');
+    </script>
+</body>
+
+</html>
