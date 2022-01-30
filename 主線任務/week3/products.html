@@ -8,12 +8,13 @@
     <title>Document</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/vue-loading-overlay@4/dist/vue-loading.min.css" rel="stylesheet">
 </head>
 
 <body>
     <div id="app">
         <div class="container d-flex py-3">
-            <button type="button" class="btn btn-outline-dark ms-auto" @click="logout" :disabled="isLogout">登出</button>
+            <button type="button" class="btn btn-outline-dark ms-auto" @click="logout">登出</button>
         </div>
         <div class="container">
             <div class="text-end mt-4">
@@ -55,7 +56,7 @@
                         <!-- 是否啟用 -->
                         <td class="text-center">
                             <span class="text-success fw-bold" v-if="item.is_enabled > 0">啟用</span>
-                            <span class="text-danger fw-bold" v-if="item.is_enabled <= 0">未啟用</span>
+                            <span class="text-danger fw-bold" v-if="item.is_enabled <= 0 || !item.is_enabled">未啟用</span>
                         </td>
                         <!-- 編輯 -->
                         <td>
@@ -125,37 +126,45 @@
                             <div class="col-sm-8">
                                 <div class="mb-3">
                                     <!-- 標題 -->
-                                    <label for="title" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.title}}</label>
-                                    <input id="title" type="text" class="form-control" :placeholder="`請輸入${productFieldInfo.title}`"
-                                        v-model="tempProduct.title">
+                                    <label for="title" class="form-label"><span
+                                            class="text-danger fs-4">*</span>{{productFieldInfo.title}}</label>
+                                    <input id="title" type="text" class="form-control"
+                                        :placeholder="`請輸入${productFieldInfo.title}`" v-model="tempProduct.title">
                                 </div>
 
                                 <div class="row">
                                     <div class="mb-3 col-md-6">
                                         <!-- 分類 -->
-                                        <label for="category" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.category}}</label>
-                                        <input id="category" type="text" class="form-control" :placeholder="`請輸入${productFieldInfo.category}`"
+                                        <label for="category" class="form-label"><span
+                                                class="text-danger fs-4">*</span>{{productFieldInfo.category}}</label>
+                                        <input id="category" type="text" class="form-control"
+                                            :placeholder="`請輸入${productFieldInfo.category}`"
                                             v-model="tempProduct.category">
                                     </div>
                                     <div class="mb-3 col-md-6">
                                         <!-- 單位 -->
-                                        <label for="price" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.unit}}</label>
-                                        <input id="unit" type="text" class="form-control" :placeholder="`請輸入${productFieldInfo.unit}`"
-                                            v-model="tempProduct.unit">
+                                        <label for="price" class="form-label"><span
+                                                class="text-danger fs-4">*</span>{{productFieldInfo.unit}}</label>
+                                        <input id="unit" type="text" class="form-control"
+                                            :placeholder="`請輸入${productFieldInfo.unit}`" v-model="tempProduct.unit">
                                     </div>
                                 </div>
 
                                 <div class="row">
                                     <div class="mb-3 col-md-6">
                                         <!-- 原價 -->
-                                        <label for="origin_price" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.origin_price}}</label>
+                                        <label for="origin_price" class="form-label"><span
+                                                class="text-danger fs-4">*</span>{{productFieldInfo.origin_price}}</label>
                                         <input id="origin_price" type="number" min="0" class="form-control"
-                                            :placeholder="`請輸入${productFieldInfo.origin_price}`" v-model.number="tempProduct.origin_price">
+                                            :placeholder="`請輸入${productFieldInfo.origin_price}`"
+                                            v-model.number="tempProduct.origin_price">
                                     </div>
                                     <div class="mb-3 col-md-6">
                                         <!-- 售價 -->
-                                        <label for="price" class="form-label"><span class="text-danger fs-4">*</span>{{productFieldInfo.price}}</label>
-                                        <input id="price" type="number" min="0" class="form-control" :placeholder="`請輸入${productFieldInfo.price}`"
+                                        <label for="price" class="form-label"><span
+                                                class="text-danger fs-4">*</span>{{productFieldInfo.price}}</label>
+                                        <input id="price" type="number" min="0" class="form-control"
+                                            :placeholder="`請輸入${productFieldInfo.price}`"
                                             v-model.number="tempProduct.price">
                                     </div>
                                 </div>
@@ -219,17 +228,10 @@
                 </div>
             </div>
         </div>
-        <div id="loadingModal" ref="loadingModal" class="modal fade" tabindex="-1" aria-labelledby="loadingModalLabel"
-            aria-hidden="true" style="z-index: 9999;">
-            <div class="modal-dialog modal-dialog-centered"
-                style="display: flex; align-items: center; justify-content: center;">
-                <div class="spinner-border" style="width: 5rem; height: 5rem; " role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        </div>
         <!-- Modal -->
+        <loading :active="isLoading" :can-cancel="true" :is-full-page="true"></loading>
     </div>
+
     <script src="https://unpkg.com/vue@next"></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.9.1/axios.min.js'
         integrity='sha512-Xk3wWei2TGrsh9kDSBKUMIjw/86sLUvhtnv9f7fOuIwhhiUTKz8szkWkzHthrM5Bb3Bu9idSzkxOrkzhcneuiw=='
@@ -240,10 +242,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.min.js"
         integrity="sha384-j0CNLUeiqtyaRmlzUHCPZ+Gy5fQu0dQ6eZ/xAww941Ai1SxSY+0EQqNXNE6DZiVc"
         crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-loading-overlay@4"></script>
     <script>
         let productModal = null;
         let delProductModal = null;
-        let loadingModal = null;
         const httpMethod = {
             get: 'get',
             post: 'post',
@@ -320,7 +322,7 @@
                     }
                 },
                 createImages() {
-                    if(this.tempProduct.imageUrl && 0 < this.tempProduct.imageUrl.length) {
+                    if (this.tempProduct.imageUrl && 0 < this.tempProduct.imageUrl.length) {
                         this.tempProduct.imagesUrl.push('');
                     } else {
                         alert("請先輸入輸入主圖片網址");
@@ -342,25 +344,29 @@
                         return;
                     }
 
-                    if(!this.tempProduct.title) {
+                    if (!this.tempProduct.title) {
                         alert(`請輸入${this.productFieldInfo.title}`);
                         return;
                     }
-                    if(!this.tempProduct.category) {
+                    if (!this.tempProduct.category) {
                         alert(`請輸入${this.productFieldInfo.category}`);
                         return;
                     }
-                    if(!this.tempProduct.unit) {
+                    if (!this.tempProduct.unit) {
                         alert(`請輸入${this.productFieldInfo.unit}`);
                         return;
                     }
-                    if(!this.tempProduct.origin_price) {
+                    if (!this.tempProduct.origin_price) {
                         alert(`請輸入${this.productFieldInfo.origin_price}`);
                         return;
                     }
-                    if(!this.tempProduct.price) {
+                    if (!this.tempProduct.price) {
                         alert(`請輸入${this.productFieldInfo.price}`);
                         return;
+                    }
+
+                    if (!this.tempProduct.is_enabled) {
+                        this.tempProduct.is_enabled = false;
                     }
 
                     this.isLoading = true;
@@ -368,12 +374,12 @@
                     if (this.tempProduct.imagesUrl && 0 < this.tempProduct.imagesUrl.length) {
                         const imagesUrlList = this.tempProduct.imagesUrl;
                         imagesUrlList.forEach((element, index) => {
-                            if(0 >= element.length) {
+                            if (0 >= element.length) {
                                 imagesUrlList.splice(index, 1);
                             }
                         });
                     }
-                    
+
                     axios[http](url, { data: this.tempProduct }).then((response) => {
                         alert(response.data.message);
                         productModal.hide();
@@ -429,25 +435,12 @@
 
                 }
             },
-            watch: {
-                isLoading(currValue, preValue) {
-                    if (currValue) {
-                        loadingModal.show();
-                    } else {
-                        loadingModal.hide();
-                    }
-                }
-            },
             mounted() {
                 productModal = new bootstrap.Modal(document.getElementById('productModal'), {
                     keyboard: false,
                     backdrop: 'static'
                 });
                 delProductModal = new bootstrap.Modal(document.getElementById('delProductModal'), {
-                    keyboard: false,
-                    backdrop: 'static'
-                });
-                loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
                     keyboard: false,
                     backdrop: 'static'
                 });
@@ -459,7 +452,7 @@
                 this.checkAdminUser()
             }
         }
-        Vue.createApp(app).mount('#app');
+        Vue.createApp(app).use(VueLoading.Plugin).component('loading', VueLoading).mount('#app');
     </script>
 </body>
 
