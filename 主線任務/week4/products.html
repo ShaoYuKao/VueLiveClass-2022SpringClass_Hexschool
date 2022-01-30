@@ -25,6 +25,9 @@
             <table class="table mt-4">
                 <thead>
                     <tr>
+                        <th width="50">
+                            #
+                        </th>
                         <th width="120">
                             分類
                         </th>
@@ -44,7 +47,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in products" :key="item.id">
+                    <tr v-for="(item, index) in products" :key="item.id">
+                        <td>{{ index + 1 }}</td>
                         <!-- 分類 -->
                         <td>{{ item.category }}</td>
                         <!-- 產品名稱 -->
@@ -74,8 +78,78 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- 分頁元件 -->
+            <pagination :pages="pagination" @change-pages-handler="getData"></pagination>
+
         </div>
         <!-- Modal -->
+        <product-modal :state="state" :state-mode="stateMode" :temp-product="tempProduct"
+            :current-page="pagination.current_page" @loading-handler="onLoading" @get-data-handler="getData">
+        </product-modal>
+
+        <del-product-modal :temp-product="tempProduct" :current-page="pagination.current_page" @loading-handler="onLoading" @get-data-handler="getData">
+        </del-product-modal>
+        <!-- Modal -->
+
+        <!-- loading -->
+        <loading :active="isLoading" :can-cancel="true" :is-full-page="true"></loading>
+
+    </div>
+
+    <!-- 分頁元件 template -->
+    <script type="text/x-template" id="pagination">
+        <nav aria-label="Page navigation example">
+          <ul class="pagination">
+            <li
+              class="page-item"
+              :class="{'disabled': pages.current_page === 1}"
+            >
+              <a
+                class="page-link"
+                href="#"
+                aria-label="Previous"
+                @click.prevent="changePages(pages.current_page - 1)"
+              >
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+            <li
+              v-for="(item, index) in pages.total_pages"
+              :key="index"
+              class="page-item"
+              :class="{'active': item === pages.current_page}"
+            >
+              <span
+                class="page-link"
+                v-if="item === pages.current_page"
+              >{{ item }}</span>
+              <a
+                class="page-link"
+                href="#"
+                v-else
+                @click.prevent="changePages(item)"
+              >{{ item }}</a>
+            </li>
+            <li
+              class="page-item"
+              :class="{'disabled': pages.current_page === pages.total_pages}"
+            >
+              <a
+                class="page-link"
+                href="#"
+                aria-label="Next"
+                @click.prevent="changePages(pages.current_page + 1)"
+              >
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+    </script>
+
+    <!-- 新增/編輯產品 template -->
+    <script type="text/x-template" id="productModal">
         <div id="productModal" ref="productModal" class="modal fade" tabindex="-1" aria-labelledby="productModalLabel"
             aria-hidden="true">
             <div class="modal-dialog modal-xl">
@@ -203,6 +277,10 @@
                 </div>
             </div>
         </div>
+    </script>
+
+    <!-- 刪除產品 template -->
+    <script type="text/x-template" id="delProductModal">
         <div id="delProductModal" ref="delProductModal" class="modal fade" tabindex="-1"
             aria-labelledby="delProductModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -228,12 +306,7 @@
                 </div>
             </div>
         </div>
-        <!-- Modal -->
-
-        <!-- loading -->
-        <loading :active="isLoading" :can-cancel="false" :is-full-page="true"></loading>
-
-    </div>
+    </script>
 
     <script src="https://unpkg.com/vue@next"></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.9.1/axios.min.js'
@@ -246,221 +319,7 @@
         integrity="sha384-j0CNLUeiqtyaRmlzUHCPZ+Gy5fQu0dQ6eZ/xAww941Ai1SxSY+0EQqNXNE6DZiVc"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue-loading-overlay@4"></script>
-    <script>
-        let productModal = null;
-        let delProductModal = null;
-        const httpMethod = {
-            get: 'get',
-            post: 'post',
-            put: 'put',
-            delete: 'delete'
-        }
-
-        const app = {
-            data() {
-                return {
-                    apiUrl: 'https://vue3-course-api.hexschool.io/v2',
-                    apiPath: '202201-vue-shaoyu',
-                    productFieldInfo: {
-                        title: '標題',
-                        category: '分類',
-                        unit: '單位',
-                        origin_price: '原價',
-                        price: '售價'
-                    },
-                    tempProduct: {},
-                    state: "",
-                    stateMode: {
-                        add: "add",
-                        edit: "edit",
-                        delete: "delete"
-                    },
-                    isLoading: false,
-                    products: []
-                }
-            },
-            methods: {
-                checkAdminUser() {
-                    const url = `${this.apiUrl}/api/user/check`;
-
-                    this.isLoading = true;
-
-                    axios[httpMethod.post](url)
-                        .then(() => {
-                            this.getData();
-                        })
-                        .catch((err) => {
-                            console.error("checkAdminUser err", err);
-                            alert(err.data.message);
-                            window.location = 'index.html';
-                        })
-                },
-                getData() {
-                    this.isLoading = true;
-
-                    const url = `${this.apiUrl}/api/${this.apiPath}/admin/products/all`;
-                    axios[httpMethod.get](url).then((response) => {
-                        this.products = response.data.products;
-                    }).catch((err) => {
-                        console.error("getData err", err);
-                        alert(err.data.message);
-                    }).finally(() => {
-                        this.isLoading = false;
-                    })
-                },
-                openModal(state, item) {
-                    this.state = state;
-
-                    if (state === this.stateMode.add) {
-                        this.tempProduct = {
-                            imagesUrl: [],
-                        };
-                        productModal.show();
-                    } else if (state === this.stateMode.edit) {
-                        this.tempProduct = JSON.parse(JSON.stringify(item));
-                        productModal.show();
-                    } else if (state === this.stateMode.delete) {
-                        this.tempProduct = { ...item };
-                        delProductModal.show()
-                    }
-                },
-                createImages() {
-                    if (this.tempProduct.imageUrl && 0 < this.tempProduct.imageUrl.length) {
-                        if (!this.tempProduct.imagesUrl) {
-                            this.tempProduct.imagesUrl = [''];
-                        } else {
-                            this.tempProduct.imagesUrl.push('');
-                        }
-                    } else {
-                        alert("請先輸入輸入主圖片網址");
-                    }
-                },
-                updateProduct() {
-                    let url = '';
-                    let http = '';
-
-                    if (this.state === this.stateMode.add) {
-                        url = `${this.apiUrl}/api/${this.apiPath}/admin/product`;
-                        http = httpMethod.post;
-                    } else if (this.state === this.stateMode.edit) {
-                        url = `${this.apiUrl}/api/${this.apiPath}/admin/product/${this.tempProduct.id}`;
-                        http = httpMethod.put;
-                    }
-
-                    if (!url || !http) {
-                        return;
-                    }
-
-                    if (!this.tempProduct.title) {
-                        alert(`請輸入${this.productFieldInfo.title}`);
-                        return;
-                    }
-                    if (!this.tempProduct.category) {
-                        alert(`請輸入${this.productFieldInfo.category}`);
-                        return;
-                    }
-                    if (!this.tempProduct.unit) {
-                        alert(`請輸入${this.productFieldInfo.unit}`);
-                        return;
-                    }
-                    if (!this.tempProduct.origin_price) {
-                        alert(`請輸入${this.productFieldInfo.origin_price}`);
-                        return;
-                    }
-                    if (!this.tempProduct.price) {
-                        alert(`請輸入${this.productFieldInfo.price}`);
-                        return;
-                    }
-
-                    if (!this.tempProduct.is_enabled) {
-                        this.tempProduct.is_enabled = false;
-                    }
-
-                    this.isLoading = true;
-
-                    if (this.tempProduct.imagesUrl && 0 < this.tempProduct.imagesUrl.length) {
-                        const imagesUrlList = this.tempProduct.imagesUrl;
-                        imagesUrlList.forEach((element, index) => {
-                            if (0 >= element.length) {
-                                imagesUrlList.splice(index, 1);
-                            }
-                        });
-                    }
-
-                    axios[http](url, { data: this.tempProduct }).then((response) => {
-                        alert(response.data.message);
-                        productModal.hide();
-                        this.getData();
-                    }).catch((err) => {
-                        console.error("updateProduct err", err);
-                        alert(err.data.message);
-                    }).finally(() => {
-                        this.isLoading = false;
-                    })
-                },
-                delProduct() {
-                    const url = `${this.apiUrl}/api/${this.apiPath}/admin/product/${this.tempProduct.id}`;
-
-                    this.isLoading = true;
-
-                    axios[httpMethod.delete](url).then((response) => {
-                        alert(response.data.message);
-                        delProductModal.hide();
-                        this.getData();
-                    }).catch((err) => {
-                        console.error("delProduct err", err);
-                        alert(err.data.message);
-                    }).finally(() => {
-                        this.isLoading = false;
-                    })
-                },
-                isDisabledAddImg() {
-                    let isDisabled = false;
-
-                    if (this.tempProduct && this.tempProduct.imagesUrl && 0 < this.tempProduct.imagesUrl.length) {
-                        if (0 >= this.tempProduct.imagesUrl[this.tempProduct.imagesUrl.length - 1].length) {
-                            isDisabled = true;
-                        }
-                    }
-
-                    return isDisabled;
-                },
-                logout() {
-                    this.isLoading = true;
-
-                    const url = `${this.apiUrl}/api/logout`;
-                    axios.post(url)
-                        .then((res) => { })
-                        .catch((err) => {
-                            console.error("err", err);
-                        })
-                        .finally(() => {
-                            document.cookie = "hexToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
-                            this.isLoading = false;
-                            window.location = 'index.html';
-                        })
-
-                }
-            },
-            mounted() {
-                productModal = new bootstrap.Modal(document.getElementById('productModal'), {
-                    keyboard: false,
-                    backdrop: 'static'
-                });
-                delProductModal = new bootstrap.Modal(document.getElementById('delProductModal'), {
-                    keyboard: false,
-                    backdrop: 'static'
-                });
-
-                // 取出 Token
-                const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
-                axios.defaults.headers.common.Authorization = token;
-
-                this.checkAdminUser()
-            }
-        }
-        Vue.createApp(app).use(VueLoading.Plugin).component('loading', VueLoading).mount('#app');
-    </script>
+    <script src="./js/products.js" type="module"></script>
 </body>
 
 </html>
