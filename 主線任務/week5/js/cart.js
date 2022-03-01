@@ -132,16 +132,20 @@ app.component("product-modal", {
       product: {},
       qty: 1,
       isLoading: false,
+      preId: "", // 暫存查看上一個產品的 id
     };
   },
   watch: {
     id() {
       this.getProduct();
+      if (this.preId !== this.id) {
+        this.preId = this.id;
+        this.product = {};
+      }
     },
   },
   methods: {
     openModal() {
-      this.product = {};
       this.modal.show();
     },
     closeModal() {
