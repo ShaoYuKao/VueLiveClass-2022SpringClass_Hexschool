@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkweek6_homework"]=self["webpackChunkweek6_homework"]||[]).push([[423],{5423:function(e,n,r){r.r(n),r.d(n,{default:function(){return w}});var u=r(3396);function t(e,n){return(0,u.wg)(),(0,u.iD)("h2",null,"後台產品列表")}var k=r(89);const o={},c=(0,k.Z)(o,[["render",t]]);var w=c}}]);
+//# sourceMappingURL=423.06184d51.js.map
